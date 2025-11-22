@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- 麦克风访问（必须！） -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+
+    <!-- 可选：如果你还需要其他权限，例如网络、文件等 -->
+    <!-- <key>com.apple.security.network.client</key>
+    <true/> -->
+
+    <!-- Hardened Runtime 常用基础权限（Nuitka 通常自动包含，但显式声明更安全） -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+</dict>
+</plist>
