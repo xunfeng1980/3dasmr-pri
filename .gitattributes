@@ -1,1 +1,5 @@
 assets filter=lfs diff=lfs merge=lfs -text
+assets/hrtf_left.f32 filter=lfs diff=lfs merge=lfs -text
+assets/hrtf_params.txt filter=lfs diff=lfs merge=lfs -text
+assets/hrtf_right.f32 filter=lfs diff=lfs merge=lfs -text
+assets/Kemar_HRTF_sofa.sofa filter=lfs diff=lfs merge=lfs -text
