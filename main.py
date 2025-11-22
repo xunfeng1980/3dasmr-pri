@@ -6,7 +6,7 @@ import time
 import os
 from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                                QHBoxLayout, QLabel, QSlider, QPushButton,
-                               QCheckBox, QSpinBox, QGroupBox)
+                               QCheckBox, QSpinBox, QGroupBox, QComboBox)
 from PySide6.QtCore import Signal, QObject, Qt
 from PySide6.QtGui import QFont
 
@@ -15,9 +15,9 @@ class AudioProcessor(QObject):
     # Signal to update GUI from audio thread
     position_updated = Signal(float, float)
 
-    def __init__(self):
+    def __init__(self, out_idx=None):
         super().__init__()
-        
+
         # Configuration
         self.SAMPLE_RATE = 48000
         self.BLOCK_SIZE = 512
@@ -61,7 +61,7 @@ class AudioProcessor(QObject):
 
         # Find closest HRTF
         self.current_left_ir, self.current_right_ir = self.find_closest_hrtf(self.azimuth, self.elevation)
-        
+
         # Find audio devices
         devices = sd.query_devices()
         self.bh_idx = next((i for i, d in enumerate(devices)
@@ -71,8 +71,17 @@ class AudioProcessor(QObject):
             print("❌ 未找到 BlackHole 2ch。请确认已安装并设为系统输出。")
             sys.exit(1)
 
-        self.out_idx = next((i for i, d in enumerate(devices)
-                            if "BlackHole" not in d['name'] and d['max_input_channels'] == 0 and d['max_output_channels'] >= 2), None)
+        # Use provided output device index if available, otherwise find a suitable one automatically
+        if out_idx is not None:
+            self.out_idx = out_idx
+        else:
+            self.out_idx = next((i for i, d in enumerate(devices)
+                                if "BlackHole" not in d['name'] and d['max_input_channels'] == 0 and d['max_output_channels'] >= 2), None)
+
+        # Verify that the selected output device is valid
+        if self.out_idx is None:
+            print("❌ 未找到合适的输出设备。请确认有可用的输出设备。")
+            sys.exit(1)
 
         print(f"✅ 输入: {devices[self.bh_idx]['name']}")
         print(f"🔊 输出: {devices[self.out_idx]['name']}")
@@ -142,6 +151,28 @@ class AudioProcessor(QObject):
             callback=self.process_audio
         )
         self.stream.start()
+
+    def change_output_device(self, new_out_idx):
+        """Change the output device dynamically"""
+        # Validate the new output device
+        devices = sd.query_devices()
+        if (new_out_idx >= 0 and new_out_idx < len(devices) and
+            "BlackHole" not in devices[new_out_idx]['name'] and
+            devices[new_out_idx]['max_input_channels'] == 0 and
+            devices[new_out_idx]['max_output_channels'] >= 2):
+
+            if new_out_idx != self.out_idx:
+                old_out_idx = self.out_idx
+                self.out_idx = new_out_idx
+
+                # Restart the audio stream with the new output device
+                self.stop_audio_stream()
+
+                print(f"🔊 输出设备已更改为: {devices[self.out_idx]['name']}")
+
+                self.start_audio_stream()
+        else:
+            print(f"❌ 无效的输出设备索引: {new_out_idx}")
 
     def stop_audio_stream(self):
         if hasattr(self, 'stream'):
@@ -256,6 +287,33 @@ class MainWindow(QMainWindow):
         self.reset_button.clicked.connect(self.reset_position)
         control_layout.addWidget(self.reset_button)
 
+        # Output device selection
+        output_device_layout = QHBoxLayout()
+        output_device_label = QLabel("Output Device:")
+        self.output_device_combo = QComboBox()
+
+        # Get available output devices and populate the combo box
+        devices = sd.query_devices()
+        output_devices = [(i, d) for i, d in enumerate(devices)
+                         if "BlackHole" not in d['name'] and d['max_input_channels'] == 0 and d['max_output_channels'] >= 2]
+
+        for i, device in output_devices:
+            self.output_device_combo.addItem(device['name'], i)
+
+        # Set the initial selection to the auto-detected device
+        initial_out_idx = next((i for i, d in enumerate(devices)
+                               if "BlackHole" not in d['name'] and d['max_input_channels'] == 0 and d['max_output_channels'] >= 2), None)
+        if initial_out_idx is not None:
+            for idx in range(self.output_device_combo.count()):
+                if self.output_device_combo.itemData(idx) == initial_out_idx:
+                    self.output_device_combo.setCurrentIndex(idx)
+                    break
+
+        self.output_device_combo.currentIndexChanged.connect(self.output_device_changed)
+        output_device_layout.addWidget(output_device_label)
+        output_device_layout.addWidget(self.output_device_combo)
+        control_layout.addLayout(output_device_layout)
+
         # Status label
         self.status_label = QLabel("Status: Ready")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -264,7 +322,12 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(control_group)
 
         # Initialize audio processor
-        self.audio_processor = AudioProcessor()
+        # Get the initially selected output device from the combo box
+        initial_out_idx = None
+        if self.output_device_combo.count() > 0:
+            initial_out_idx = self.output_device_combo.itemData(self.output_device_combo.currentIndex())
+
+        self.audio_processor = AudioProcessor(out_idx=initial_out_idx)
         
         # Connect position update signal
         self.audio_processor.position_updated.connect(self.update_position_display)
@@ -307,6 +370,12 @@ class MainWindow(QMainWindow):
         self.elevation_slider.setValue(int(elevation))
         self.azimuth_label_display.setText(f"{azimuth:.1f}")
         self.elevation_label_display.setText(f"{elevation:.1f}")
+
+    def output_device_changed(self, index):
+        """Handle output device selection change"""
+        if index >= 0:
+            selected_device_idx = self.output_device_combo.itemData(index)
+            self.audio_processor.change_output_device(selected_device_idx)
 
     def closeEvent(self, event):
         # Stop audio stream on close
