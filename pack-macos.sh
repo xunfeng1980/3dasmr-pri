@@ -1,9 +1,6 @@
 #!/bin/bash
 echo "Building 3D ASMR for macOS..."
 
-# Install required packages
-uv add nuitka zstandard
-
 # Build with Nuitka for macOS as a single file
 python -m nuitka \
   --onefile \
