@@ -47,7 +47,7 @@ class AudioProcessor(QObject):
         self.azimuth = 0.0
         self.elevation = 0.0
         self.running = True
-        self.auto_rotate = True  # ←←← 默认开启自动旋转
+        self.auto_rotate = True
         self.rotate_speed = 30.0
         self.last_update_time = time.time()
 
@@ -61,37 +61,42 @@ class AudioProcessor(QObject):
         current_platform = platform.system()
 
         if current_platform == "Windows":
-            hostapis = sd.query_hostapis()
-            wasapi_id = None
-            for i, api in enumerate(hostapis):
-                if api['name'] == 'Windows WASAPI':
-                    wasapi_id = i
-                    break
-            if wasapi_id is None:
-                print("❌ WASAPI host API not found.")
+            # 查找 VB-CABLE Output (虚拟输入设备)
+            self.loopback_device = next((i for i, d in enumerate(devices)
+                                         if "CABLE Output" in d['name'] and d['max_input_channels'] >= 2), None)
+            if self.loopback_device is None:
+                print("\n" + "="*60)
+                print("❌ VB-CABLE not found!")
+                print("="*60)
+                print("\n📥 Installation Steps:")
+                print("1. Download VB-CABLE from: https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip")
+                print("2. Install VB-CABLE")
+                print("3. In Windows Sound Settings:")
+                print("   - Right-click speaker icon in taskbar")
+                print("   - Select 'Sound settings' or 'Sounds'")
+                print("   - Set 'CABLE Input' as Default Playback Device")
+                print("4. Restart this program")
+                print("\n" + "="*60 + "\n")
                 sys.exit(1)
-
-            default_output = sd.default.device[1]
-            if default_output is None:
-                output_devices = [i for i, d in enumerate(devices) if d['max_output_channels'] >= 2]
-                default_output = output_devices[0] if output_devices else None
-
-            if default_output is None:
-                print("❌ No output device available for WASAPI loopback.")
-                sys.exit(1)
-
-            self.loopback_device = default_output
-            self.wasapi_id = wasapi_id
-            self.input_mode = "WASAPI Loopback"
+            self.input_mode = "VB-CABLE"
+            print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
 
         elif current_platform == "Darwin":
             self.loopback_device = next((i for i, d in enumerate(devices)
                                          if "BlackHole 2ch" in d['name'] and d['max_input_channels'] >= 2), None)
             if self.loopback_device is None:
-                print("❌ BlackHole 2ch not found. Please install BlackHole (https://existential.audio/blackhole/).")
+                print("\n" + "="*60)
+                print("❌ BlackHole not found!")
+                print("="*60)
+                print("\n📥 Installation Steps:")
+                print("1. Download BlackHole from: https://existential.audio/blackhole/download/")
+                print("2. Install BlackHole 2ch")
+                print("3. Set BlackHole 2ch as your audio output device")
+                print("4. Restart this program")
+                print("\n" + "="*60 + "\n")
                 sys.exit(1)
-            self.wasapi_id = None
             self.input_mode = "BlackHole"
+            print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
         else:
             print("❌ Only Windows and macOS are supported.")
             sys.exit(1)
@@ -174,8 +179,6 @@ class AudioProcessor(QObject):
                 print(f"⚠️ Output write error: {e}", file=sys.stderr)
 
     def start_audio_stream(self):
-        current_platform = platform.system()
-
         self.output_stream = sd.OutputStream(
             device=self.out_idx,
             channels=self.CHANNELS,
@@ -185,31 +188,15 @@ class AudioProcessor(QObject):
         )
         self.output_stream.start()
 
-        if current_platform == "Windows":
-            self.input_stream = sd.InputStream(
-                device=self.loopback_device,
-                host_api=self.wasapi_id,
-                channels=self.CHANNELS,
-                samplerate=self.SAMPLE_RATE,
-                blocksize=self.BLOCK_SIZE,
-                dtype='float32',
-                callback=self.input_callback,
-                latency='low',
-                extra_settings=sd.WasapiSettings(loopback=True)
-            )
-        elif current_platform == "Darwin":
-            self.input_stream = sd.InputStream(
-                device=self.loopback_device,
-                channels=self.CHANNELS,
-                samplerate=self.SAMPLE_RATE,
-                blocksize=self.BLOCK_SIZE,
-                dtype='float32',
-                callback=self.input_callback,
-                latency='low'
-            )
-        else:
-            raise RuntimeError("Unsupported platform")
-
+        self.input_stream = sd.InputStream(
+            device=self.loopback_device,
+            channels=self.CHANNELS,
+            samplerate=self.SAMPLE_RATE,
+            blocksize=self.BLOCK_SIZE,
+            dtype='float32',
+            callback=self.input_callback,
+            latency='low'
+        )
         self.input_stream.start()
 
     def stop_audio_stream(self):
@@ -271,7 +258,7 @@ class MainWindow(QMainWindow):
             sys.exit(1)
 
         self.setWindowTitle("3D Audio HRTF Controller")
-        self.setGeometry(100, 100, 620, 540)
+        self.setGeometry(100, 100, 620, 580)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -285,13 +272,23 @@ class MainWindow(QMainWindow):
 
         # Subtitle
         if current_platform == "Windows":
-            subtitle_text = "Using WASAPI Loopback to capture system audio"
-        else:  # macOS
+            subtitle_text = "Using VB-CABLE to capture system audio"
+        else:
             subtitle_text = "Using BlackHole to capture system audio"
         subtitle_label = QLabel(subtitle_text)
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         subtitle_label.setStyleSheet("color: gray; font-size: 12px;")
         main_layout.addWidget(subtitle_label)
+
+        # Setup instructions
+        if current_platform == "Windows":
+            instruction_text = "⚙️ Make sure 'CABLE Input' is set as your default playback device"
+        else:
+            instruction_text = "⚙️ Make sure 'BlackHole 2ch' is set as your audio output device"
+        instruction_label = QLabel(instruction_text)
+        instruction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        instruction_label.setStyleSheet("color: #FF6B00; font-size: 11px; font-weight: bold;")
+        main_layout.addWidget(instruction_label)
 
         # Control group
         control_group = QGroupBox("Head Orientation")
@@ -300,7 +297,9 @@ class MainWindow(QMainWindow):
         # Azimuth
         azimuth_layout = QHBoxLayout()
         azimuth_label = QLabel("Azimuth (°):")
+        azimuth_label.setMinimumWidth(100)
         self.azimuth_label_display = QLabel("0.0")
+        self.azimuth_label_display.setMinimumWidth(50)
         self.azimuth_slider = QSlider(Qt.Orientation.Horizontal)
         self.azimuth_slider.setRange(0, 360)
         self.azimuth_slider.setValue(0)
@@ -313,7 +312,9 @@ class MainWindow(QMainWindow):
         # Elevation
         elevation_layout = QHBoxLayout()
         elevation_label = QLabel("Elevation (°):")
+        elevation_label.setMinimumWidth(100)
         self.elevation_label_display = QLabel("0.0")
+        self.elevation_label_display.setMinimumWidth(50)
         self.elevation_slider = QSlider(Qt.Orientation.Horizontal)
         self.elevation_slider.setRange(-40, 90)
         self.elevation_slider.setValue(0)
@@ -323,10 +324,10 @@ class MainWindow(QMainWindow):
         elevation_layout.addWidget(self.elevation_label_display)
         control_layout.addLayout(elevation_layout)
 
-        # Auto rotation — DEFAULT ENABLED
+        # Auto rotation
         rotation_layout = QHBoxLayout()
         self.auto_rotate_checkbox = QCheckBox("Auto Rotate")
-        self.auto_rotate_checkbox.setChecked(True)  # ←←← 默认勾选
+        self.auto_rotate_checkbox.setChecked(True)
         self.auto_rotate_checkbox.stateChanged.connect(self.toggle_auto_rotation)
         rotate_speed_label = QLabel("Speed (°/s):")
         self.rotate_speed_spinbox = QSpinBox()
@@ -336,6 +337,7 @@ class MainWindow(QMainWindow):
         rotation_layout.addWidget(self.auto_rotate_checkbox)
         rotation_layout.addWidget(rotate_speed_label)
         rotation_layout.addWidget(self.rotate_speed_spinbox)
+        rotation_layout.addStretch()
         control_layout.addLayout(rotation_layout)
 
         # Reset
@@ -346,6 +348,7 @@ class MainWindow(QMainWindow):
         # Output device
         output_layout = QHBoxLayout()
         output_label = QLabel("Output Device:")
+        output_label.setMinimumWidth(100)
         self.output_combo = QComboBox()
         devices = sd.query_devices()
         output_devs = [
@@ -368,11 +371,12 @@ class MainWindow(QMainWindow):
 
         # Status label
         if current_platform == "Windows":
-            status_text = "Status: Ready (Windows: Using WASAPI Loopback)"
+            status_text = "Status: Ready (Windows: Using VB-CABLE)"
         else:
             status_text = "Status: Ready (macOS: Using BlackHole)"
         self.status_label = QLabel(status_text)
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_label.setStyleSheet("color: green; font-weight: bold;")
         control_layout.addWidget(self.status_label)
 
         main_layout.addWidget(control_group)
@@ -386,8 +390,7 @@ class MainWindow(QMainWindow):
         self.rotate_thread = threading.Thread(target=self.audio_processor.auto_rotate_thread_func, daemon=True)
         self.rotate_thread.start()
 
-        # Set initial status for auto rotation
-        self.status_label.setText("Status: Auto Rotation ON")
+        self.status_label.setText("Status: Auto Rotation ON ✓")
 
     def azimuth_changed(self, value):
         self.azimuth_label_display.setText(f"{value:.1f}")
@@ -400,7 +403,7 @@ class MainWindow(QMainWindow):
     def toggle_auto_rotation(self, state):
         enabled = state == Qt.CheckState.Checked.value
         self.audio_processor.toggle_auto_rotation(enabled)
-        status = "ON" if enabled else "OFF"
+        status = "ON ✓" if enabled else "OFF"
         self.status_label.setText(f"Status: Auto Rotation {status}")
 
     def rotate_speed_changed(self, value):
@@ -411,7 +414,7 @@ class MainWindow(QMainWindow):
         self.azimuth_slider.setValue(0)
         self.elevation_slider.setValue(0)
         self.auto_rotate_checkbox.setChecked(False)
-        self.status_label.setText("Status: Position Reset")
+        self.status_label.setText("Status: Position Reset ✓")
 
     def update_gui_from_processor(self, azimuth, elevation):
         self.azimuth_slider.blockSignals(True)
