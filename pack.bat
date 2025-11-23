@@ -4,9 +4,9 @@ echo Building 3D ASMR for Windows...
 REM Install required packages
 uv add nuitka zstandard
 
-REM Build with Nuitka for Windows
+REM Build with Nuitka for Windows as a single file
 python -m nuitka ^
-  --standalone ^
+  --onefile ^
   --enable-plugin=pyside6,numpy ^
   --include-data-dir=assets=assets ^
   --output-filename="3DASMR.exe" ^
