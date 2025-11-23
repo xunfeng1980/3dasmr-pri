@@ -67,17 +67,8 @@ class AudioProcessor(QObject):
             if self.loopback_device is None:
                 print("\n" + "="*60)
                 print("❌ VB-CABLE not found!")
-                print("="*60)
-                print("\n📥 Installation Steps:")
-                print("1. Download VB-CABLE from: https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip")
-                print("2. Install VB-CABLE")
-                print("3. In Windows Sound Settings:")
-                print("   - Right-click speaker icon in taskbar")
-                print("   - Select 'Sound settings' or 'Sounds'")
-                print("   - Set 'CABLE Input' as Default Playback Device")
-                print("4. Restart this program")
-                print("\n" + "="*60 + "\n")
-                sys.exit(1)
+                print("💡 Check the GUI for installation instructions.")
+                print("="*60 + "\n")
             self.input_mode = "VB-CABLE"
             print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
 
@@ -87,14 +78,8 @@ class AudioProcessor(QObject):
             if self.loopback_device is None:
                 print("\n" + "="*60)
                 print("❌ BlackHole not found!")
-                print("="*60)
-                print("\n📥 Installation Steps:")
-                print("1. Download BlackHole from: https://existential.audio/blackhole/download/")
-                print("2. Install BlackHole 2ch")
-                print("3. Set BlackHole 2ch as your audio output device")
-                print("4. Restart this program")
-                print("\n" + "="*60 + "\n")
-                sys.exit(1)
+                print("💡 Check the GUI for installation instructions.")
+                print("="*60 + "\n")
             self.input_mode = "BlackHole"
             print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
         else:
@@ -282,9 +267,15 @@ class MainWindow(QMainWindow):
 
         # Setup instructions
         if current_platform == "Windows":
-            instruction_text = "⚙️ Make sure 'CABLE Input' is set as your default playback device"
+            instruction_text = ("📥 VB-CABLE Installation:\n"
+                                "1. Download from: https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip\n"
+                                "2. Install VBCABLE_Setup_x64.exe\n"
+                                "3. Set 'CABLE Input' as Default Playback Device in Sound Settings")
         else:
-            instruction_text = "⚙️ Make sure 'BlackHole 2ch' is set as your audio output device"
+            instruction_text = ("📥 BlackHole Installation:\n"
+                                "1. Download from: https://existential.audio/blackhole/download/\n"
+                                "2. Install BlackHole 2ch\n"
+                                "3. Set BlackHole 2ch as your audio output device")
         instruction_label = QLabel(instruction_text)
         instruction_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         instruction_label.setStyleSheet("color: #FF6B00; font-size: 11px; font-weight: bold;")
