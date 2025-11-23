@@ -1,6 +1,8 @@
 #!/bin/bash
 echo "Building 3D ASMR for Windows..."
 
+source ./venv/Scripts/activate
+
 python -m nuitka \
   --onefile \
   --enable-plugin=pyside6,numpy \

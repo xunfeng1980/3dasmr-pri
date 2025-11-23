@@ -1,6 +1,8 @@
 #!/bin/bash
 echo "Building 3D ASMR for macOS..."
 
+source ./venv/bin/activate
+
 # Build with Nuitka for macOS as a single file
 python -m nuitka \
   --onefile \
