@@ -72,7 +72,7 @@ class AudioProcessor(QObject):
                                 '2. Install VBCABLE_Setup_x64.exe<br>'
                                 '3. Set \'CABLE Input\' as Default Playback Device in Sound Settings""")
                 print("="*60 + "\n")
-                exit(1)
+                sys.exit(1)
             else:
                 self.input_mode = "VB-CABLE"
                 print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
@@ -88,7 +88,7 @@ class AudioProcessor(QObject):
                                 '2. Install BlackHole 2ch<br>'
                                 '3. Set BlackHole 2ch as your audio output device""")
                 print("="*60 + "\n")
-                exit(1)
+                sys.exit(1)(1)
             else:
                 self.input_mode = "BlackHole"
                 print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
