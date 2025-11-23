@@ -4,6 +4,7 @@ echo "Building 3D ASMR for Windows..."
 python -m nuitka \
   --standalone \
   --enable-plugin=pyside6,numpy \
+  --include-data-dir=assets=assets \
   --output-filename="3DASMR" \
   --assume-yes-for-downloads \
   --output-dir=output \
