@@ -67,10 +67,15 @@ class AudioProcessor(QObject):
             if self.loopback_device is None:
                 print("\n" + "="*60)
                 print("❌ VB-CABLE not found!")
-                print("💡 Check the GUI for installation instructions.")
+                print("""📥 <a href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip">VB-CABLE Installation</a>:<br>'
+                                '1. Download from: <a href="https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip">VB-CABLE Driver</a><br>'
+                                '2. Install VBCABLE_Setup_x64.exe<br>'
+                                '3. Set \'CABLE Input\' as Default Playback Device in Sound Settings""")
                 print("="*60 + "\n")
-            self.input_mode = "VB-CABLE"
-            print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
+                exit(1)
+            else:
+                self.input_mode = "VB-CABLE"
+                print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
 
         elif current_platform == "Darwin":
             self.loopback_device = next((i for i, d in enumerate(devices)
@@ -78,10 +83,15 @@ class AudioProcessor(QObject):
             if self.loopback_device is None:
                 print("\n" + "="*60)
                 print("❌ BlackHole not found!")
-                print("💡 Check the GUI for installation instructions.")
+                print("""📥 <a href="https://existential.audio/blackhole/download/">BlackHole Installation</a>:<br>'
+                                '1. Download from: <a href="https://existential.audio/blackhole/download/">BlackHole Driver</a><br>'
+                                '2. Install BlackHole 2ch<br>'
+                                '3. Set BlackHole 2ch as your audio output device""")
                 print("="*60 + "\n")
-            self.input_mode = "BlackHole"
-            print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
+                exit(1)
+            else:
+                self.input_mode = "BlackHole"
+                print(f"🎤 Input device: {devices[self.loopback_device]['name']}")
         else:
             print("❌ Only Windows and macOS are supported.")
             sys.exit(1)
