@@ -21,10 +21,11 @@ class AudioProcessor(QObject):
         self.SAMPLE_RATE = 48000
         self.BLOCK_SIZE = 512
         self.CHANNELS = 2
+        assets_path = os.path.join(os.path.dirname(__file__), "assets")
         self.HRTF_FILES = {
-            "params": "assets/hrtf_params.txt",
-            "left": "assets/hrtf_left.f32",
-            "right": "assets/hrtf_right.f32"
+            "params": f"{assets_path}/hrtf_params.txt",
+            "left": f"{assets_path}/hrtf_left.f32",
+            "right":f"{assets_path}/hrtf_right.f32"
         }
 
         for name, path in self.HRTF_FILES.items():
