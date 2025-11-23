@@ -6,7 +6,6 @@ python -m nuitka \
   --onefile \
   --enable-plugin=pyside6,numpy \
   --include-data-dir=assets=assets \
-  --windows-disable-console \
   --output-filename="3DASMR" \
   --assume-yes-for-downloads \
   --output-dir=output \
